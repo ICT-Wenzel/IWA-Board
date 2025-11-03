@@ -14,8 +14,6 @@ headers = {
 }
 
 # --- Funktionen: Laden & Speichern ---
-import base64
-
 def load_tasks():
     GITHUB_REPO = st.secrets["github_repo"]
     FILE_PATH = "data/tasks.json"
@@ -30,31 +28,28 @@ def load_tasks():
     res = requests.get(url, headers=headers)
 
     st.write("GitHub Status Code:", res.status_code)
-    st.write("GitHub Response Keys:", res.json().keys())
 
-    if res.status_code == 200:
-        content = res.json()
-        try:
-            # Base64 decodieren
-            file_text = base64.b64decode(content["content"]).decode("utf-8")
-            if not file_text.strip():
-                raise ValueError("Leere JSON-Datei")
-            data = json.loads(file_text)
-
-            # Sicherstellen, dass alle Spalten existieren
-            for col in ["Backlog", "In Progress", "Done"]:
-                if col not in data or not isinstance(data[col], list):
-                    data[col] = []
-
-            sha = content.get("sha")
-            return data, sha
-        except Exception as e:
-            st.warning(f"Fehler beim Laden der JSON-Datei: {e}")
-            return {"Backlog": [], "In Progress": [], "Done": []}, None
-    else:
-        st.warning("Fehler beim Laden der Datei von GitHub")
+    if res.status_code != 200:
+        st.warning(f"Fehler beim Laden der Datei von GitHub: {res.status_code}")
         return {"Backlog": [], "In Progress": [], "Done": []}, None
 
+    content = res.json()
+
+    try:
+        # Base64-Inhalt dekodieren
+        file_text = base64.b64decode(content["content"]).decode("utf-8")
+        data = json.loads(file_text)
+    except Exception as e:
+        st.warning(f"Fehler beim Dekodieren der JSON-Datei: {e}")
+        data = {"Backlog": [], "In Progress": [], "Done": []}
+
+    # Spalten sicherstellen
+    for col in ["Backlog", "In Progress", "Done"]:
+        if col not in data or not isinstance(data[col], list):
+            data[col] = []
+
+    sha = content.get("sha")
+    return data, sha
 def save_tasks(tasks, sha):
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
     content_str = json.dumps(tasks, indent=2)
