@@ -4,7 +4,7 @@ import requests
 import base64
 
 # --- GitHub Setup ---
-GITHUB_REPO = st.secrets["github_repo"]  # z.B. "deinname/IWABoard"
+GITHUB_REPO = st.secrets["github_repo"]  # z.B. "deinname/IWA-Board"
 FILE_PATH = "data/tasks.json"
 GITHUB_TOKEN = st.secrets["github_token"]
 
@@ -15,18 +15,8 @@ headers = {
 
 # --- Funktionen: Laden & Speichern ---
 def load_tasks():
-    GITHUB_REPO = st.secrets["github_repo"]
-    FILE_PATH = "data/tasks.json"
-    GITHUB_TOKEN = st.secrets["github_token"]
-
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
     res = requests.get(url, headers=headers)
-
     st.write("GitHub Status Code:", res.status_code)
 
     if res.status_code != 200:
@@ -34,7 +24,6 @@ def load_tasks():
         return {"Backlog": [], "In Progress": [], "Done": []}, None
 
     content = res.json()
-
     try:
         # Base64-Inhalt dekodieren
         file_text = base64.b64decode(content["content"]).decode("utf-8")
@@ -43,6 +32,16 @@ def load_tasks():
         st.warning(f"Fehler beim Dekodieren der JSON-Datei: {e}")
         data = {"Backlog": [], "In Progress": [], "Done": []}
 
+    # Alte Strings automatisch zu Tasks konvertieren
+    for col in ["Backlog", "In Progress", "Done"]:
+        new_list = []
+        for task in data.get(col, []):
+            if isinstance(task, dict):
+                new_list.append(task)
+            elif isinstance(task, str):
+                new_list.append({"title": task, "description": ""})
+        data[col] = new_list
+
     # Spalten sicherstellen
     for col in ["Backlog", "In Progress", "Done"]:
         if col not in data or not isinstance(data[col], list):
@@ -50,6 +49,7 @@ def load_tasks():
 
     sha = content.get("sha")
     return data, sha
+
 def save_tasks(tasks, sha):
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
     content_str = json.dumps(tasks, indent=2)
@@ -68,6 +68,8 @@ def reload_tasks():
 
 if "tasks" not in st.session_state:
     reload_tasks()
+if "reload_needed" not in st.session_state:
+    st.session_state.reload_needed = False
 
 # --- Streamlit Setup ---
 st.set_page_config(page_title="IWA Board", layout="wide")
@@ -94,8 +96,8 @@ for i, col_name in enumerate(columns):
     with cols[i]:
         st.markdown(f"### <span style='color:{colors[i]}'>{col_name}</span>", unsafe_allow_html=True)
 
-        # Wir erstellen eine Kopie der Liste, um sichere Iteration zu gewährleisten
-        for idx, task in enumerate(list(st.session_state.tasks[col_name])):
+        tasks_copy = list(st.session_state.tasks[col_name])  # Kopie für sichere Iteration
+        for idx, task in enumerate(tasks_copy):
             if not isinstance(task, dict):
                 continue  # skip invalid entries
 
@@ -113,18 +115,27 @@ for i, col_name in enumerate(columns):
             """
             st.markdown(card, unsafe_allow_html=True)
 
-            # Move Task
+            # Buttons über Session State Flags
+            move_key = f"move_btn_{col_name}_{idx}"
+            del_key = f"del_{col_name}_{idx}"
             move_to = st.selectbox("Verschieben nach", columns, index=i, key=f"move_{col_name}_{idx}")
-            if st.button("✔️ Verschieben", key=f"move_btn_{col_name}_{idx}") and move_to != col_name:
-                moved = st.session_state.tasks[col_name].pop(idx)
-                st.session_state.tasks[move_to].append(moved)
-                save_tasks(st.session_state.tasks, st.session_state.sha)
-                reload_tasks()
-                st.experimental_rerun()
 
-            # Delete Task
-            if st.button("🗑️ Löschen", key=f"del_{col_name}_{idx}"):
+            # Verschieben
+            if st.button("✔️ Verschieben", key=move_key):
+                if move_to != col_name:
+                    st.session_state.tasks[col_name].pop(idx)
+                    st.session_state.tasks[move_to].append(task)
+                    save_tasks(st.session_state.tasks, st.session_state.sha)
+                    st.session_state.reload_needed = True
+
+            # Löschen
+            if st.button("🗑️ Löschen", key=del_key):
                 st.session_state.tasks[col_name].pop(idx)
                 save_tasks(st.session_state.tasks, st.session_state.sha)
-                reload_tasks()
-                st.experimental_rerun()
+                st.session_state.reload_needed = True
+
+# --- Nach Buttons neu laden ---
+if st.session_state.reload_needed:
+    reload_tasks()
+    st.session_state.reload_needed = False
+    st.experimental_rerun()
