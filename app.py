@@ -3,7 +3,7 @@ import json
 import requests
 
 # --- GitHub Repo Setup ---
-GITHUB_REPO = "username/repo-name"
+GITHUB_REPO = "ICT-Wenzel/IWA-Board"
 FILE_PATH = "data/tasks.json"
 GITHUB_TOKEN = st.secrets["github_token"]
 
