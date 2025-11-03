@@ -2,8 +2,8 @@ import streamlit as st
 import json
 import requests
 
-# --- GitHub Repo Setup ---
-GITHUB_REPO = "ICT-Wenzel/IWA-Board"
+# --- GitHub Setup ---
+GITHUB_REPO = st.secrets["github_repo"]
 FILE_PATH = "data/tasks.json"
 GITHUB_TOKEN = st.secrets["github_token"]
 
@@ -12,72 +12,85 @@ headers = {
     "Accept": "application/vnd.github.v3+json"
 }
 
+# --- Laden und Initialisieren der Tasks ---
 def load_tasks():
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
     res = requests.get(url, headers=headers)
-    
     if res.status_code == 200:
         content = res.json()
         try:
             file_text = requests.get(content["download_url"]).text
-            if not file_text.strip():  # falls Datei leer
+            if not file_text.strip():
                 raise ValueError("Empty JSON")
             data = json.loads(file_text)
         except (json.JSONDecodeError, ValueError):
-            # Leeres Board anlegen, falls JSON ungültig oder leer
             data = {"Backlog": [], "In Progress": [], "Done": []}
-        return data, content["sha"]
+        return data, content.get("sha", None)
     else:
-        # Datei existiert noch nicht → leeres Board anlegen
         return {"Backlog": [], "In Progress": [], "Done": []}, None
 
 def save_tasks(tasks, sha):
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
-    data = {
-        "message": "Update tasks via Streamlit Kanban",
-        "content": json.dumps(tasks).encode("utf-8").decode("utf-8"),
-        "sha": sha,
+    content_str = json.dumps(tasks, indent=2)
+    import base64
+    payload = {
+        "message": "Update tasks via IWA Board",
+        "content": base64.b64encode(content_str.encode()).decode(),
     }
-    res = requests.put(url, headers=headers, json=data)
-    return res.status_code == 200
+    if sha:
+        payload["sha"] = sha
+    res = requests.put(url, headers=headers, json=payload)
+    return res.status_code in [200, 201]
 
 # --- Streamlit UI ---
-st.set_page_config(page_title="Kanban Board", layout="wide")
-
-st.title("🧩 Modernes Kanban Board")
+st.set_page_config(page_title="IWA Board", layout="wide")
+st.title("🧩 IWA Board")
 
 tasks, sha = load_tasks()
 
-cols = st.columns(3)
 columns = ["Backlog", "In Progress", "Done"]
 colors = ["#74b9ff", "#ffeaa7", "#55efc4"]
+cols = st.columns(3)
 
+# --- Task erstellen ---
+with st.sidebar:
+    st.subheader("➕ Neue Aufgabe")
+    new_title = st.text_input("Titel")
+    new_desc = st.text_area("Beschreibung")
+    if st.button("Hinzufügen"):
+        if new_title.strip():
+            tasks["Backlog"].append({"title": new_title, "description": new_desc})
+            save_tasks(tasks, sha)
+            st.success("Task hinzugefügt!")
+            st.experimental_rerun()
+
+# --- Board anzeigen ---
 for i, col_name in enumerate(columns):
     with cols[i]:
         st.markdown(f"### <span style='color:{colors[i]}'>{col_name}</span>", unsafe_allow_html=True)
+        remove_indices = []
         for idx, task in enumerate(tasks[col_name]):
-            with st.expander(f"🗒️ {task['title']}"):
-                st.write(task["description"])
-                move_to = st.selectbox("Verschieben nach", columns, index=i, key=f"{col_name}_{idx}")
-                if move_to != col_name:
-                    moved = tasks[col_name].pop(idx)
-                    tasks[move_to].append(moved)
-                    save_tasks(tasks, sha)
-                    st.experimental_rerun()
-                if st.button("🗑️ Löschen", key=f"delete_{col_name}_{idx}"):
-                    tasks[col_name].pop(idx)
-                    save_tasks(tasks, sha)
-                    st.experimental_rerun()
+            card = f"""
+            <div style='
+                background-color: {colors[i]};
+                padding: 10px;
+                margin-bottom: 8px;
+                border-radius: 8px;
+                box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+            '>
+            <b>{task['title']}</b><br>{task['description']}
+            </div>
+            """
+            st.markdown(card, unsafe_allow_html=True)
 
-# --- Add New Task ---
-st.markdown("---")
-st.subheader("➕ Neue Aufgabe hinzufügen")
-title = st.text_input("Titel")
-desc = st.text_area("Beschreibung")
+            move_to = st.selectbox("Verschieben nach", columns, index=i, key=f"move_{col_name}_{idx}")
+            if move_to != col_name:
+                moved = tasks[col_name].pop(idx)
+                tasks[move_to].append(moved)
+                save_tasks(tasks, sha)
+                st.experimental_rerun()
 
-if st.button("Aufgabe hinzufügen"):
-    if title:
-        tasks["Backlog"].append({"title": title, "description": desc})
-        save_tasks(tasks, sha)
-        st.success("Aufgabe hinzugefügt!")
-        st.experimental_rerun()
+            if st.button("🗑️ Löschen", key=f"del_{col_name}_{idx}"):
+                tasks[col_name].pop(idx)
+                save_tasks(tasks, sha)
+                st.experimental_rerun()
