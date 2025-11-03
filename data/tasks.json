@@ -1,27 +1,89 @@
 {
   "Backlog": [
-    "Industrielle Werke Allschwil",
-    "Eisefarm",
-    "Holzfarm",
-    "Breeder",
-    "Trading Hall",
-    "XP Farm",
-    "Bambusfarm",
-    "Öl Pipeline",
-    "Essensfarm",
-    "Item crusher",
-    "Crafter",
-    "Sandfarm",
-    "Slimefarm",
-    "Gunpowderfarm",
-    "Zuckerohrfarm",
-    "Nuklearkraftwerk",
-    "Dampfkraftwerk",
-    "Automatisches Lager",
-    "Bohrer",
-    "Bownmealfarm",
-    "Goldfarm",
-    "Raid Farm"
+    {
+      "title": "Eisefarm",
+      "description": ""
+    },
+    {
+      "title": "Holzfarm",
+      "description": ""
+    },
+    {
+      "title": "Breeder",
+      "description": ""
+    },
+    {
+      "title": "Trading Hall",
+      "description": ""
+    },
+    {
+      "title": "XP Farm",
+      "description": ""
+    },
+    {
+      "title": "Bambusfarm",
+      "description": ""
+    },
+    {
+      "title": "\u00d6l Pipeline",
+      "description": ""
+    },
+    {
+      "title": "Essensfarm",
+      "description": ""
+    },
+    {
+      "title": "Item crusher",
+      "description": ""
+    },
+    {
+      "title": "Crafter",
+      "description": ""
+    },
+    {
+      "title": "Sandfarm",
+      "description": ""
+    },
+    {
+      "title": "Slimefarm",
+      "description": ""
+    },
+    {
+      "title": "Gunpowderfarm",
+      "description": ""
+    },
+    {
+      "title": "Zuckerohrfarm",
+      "description": ""
+    },
+    {
+      "title": "Nuklearkraftwerk",
+      "description": ""
+    },
+    {
+      "title": "Dampfkraftwerk",
+      "description": ""
+    },
+    {
+      "title": "Automatisches Lager",
+      "description": ""
+    },
+    {
+      "title": "Bohrer",
+      "description": ""
+    },
+    {
+      "title": "Bownmealfarm",
+      "description": ""
+    },
+    {
+      "title": "Goldfarm",
+      "description": ""
+    },
+    {
+      "title": "Raid Farm",
+      "description": ""
+    }
   ],
   "In Progress": [],
   "Done": []
