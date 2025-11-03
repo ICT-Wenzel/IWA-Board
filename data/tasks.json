@@ -17,10 +17,6 @@
       "description": ""
     },
     {
-      "title": "Item crusher",
-      "description": ""
-    },
-    {
       "title": "Crafter",
       "description": ""
     },
@@ -72,6 +68,10 @@
   "In Progress": [
     {
       "title": "Eisefarm",
+      "description": ""
+    },
+    {
+      "title": "Item crusher",
       "description": ""
     }
   ],
