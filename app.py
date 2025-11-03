@@ -24,6 +24,10 @@ def load_tasks():
             if not file_text.strip():  # leeres JSON abfangen
                 raise ValueError("Empty JSON")
             data = json.loads(file_text)
+            # Sicherstellen, dass alle Spalten existieren
+            for col in ["Backlog", "In Progress", "Done"]:
+                if col not in data or not isinstance(data[col], list):
+                    data[col] = []
         except (json.JSONDecodeError, ValueError):
             data = {"Backlog": [], "In Progress": [], "Done": []}
         return data, content.get("sha", None)
@@ -46,7 +50,8 @@ def save_tasks(tasks, sha):
 def reload_tasks():
     st.session_state.tasks, st.session_state.sha = load_tasks()
 
-reload_tasks()
+if "tasks" not in st.session_state:
+    reload_tasks()
 
 # --- Streamlit Setup ---
 st.set_page_config(page_title="IWA Board", layout="wide")
@@ -72,7 +77,12 @@ with st.sidebar:
 for i, col_name in enumerate(columns):
     with cols[i]:
         st.markdown(f"### <span style='color:{colors[i]}'>{col_name}</span>", unsafe_allow_html=True)
-        for idx, task in enumerate(st.session_state.tasks[col_name]):
+
+        # Wir erstellen eine Kopie der Liste, um sichere Iteration zu gewährleisten
+        for idx, task in enumerate(list(st.session_state.tasks[col_name])):
+            if not isinstance(task, dict):
+                continue  # skip invalid entries
+
             # Card Design
             card = f"""
             <div style='
@@ -82,21 +92,23 @@ for i, col_name in enumerate(columns):
                 border-radius: 8px;
                 box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
             '>
-            <b>{task['title']}</b><br>{task['description']}
+            <b>{task.get('title', '')}</b><br>{task.get('description', '')}
             </div>
             """
             st.markdown(card, unsafe_allow_html=True)
 
             # Move Task
             move_to = st.selectbox("Verschieben nach", columns, index=i, key=f"move_{col_name}_{idx}")
-            if move_to != col_name:
+            if st.button("✔️ Verschieben", key=f"move_btn_{col_name}_{idx}") and move_to != col_name:
                 moved = st.session_state.tasks[col_name].pop(idx)
                 st.session_state.tasks[move_to].append(moved)
                 save_tasks(st.session_state.tasks, st.session_state.sha)
                 reload_tasks()
+                st.experimental_rerun()
 
             # Delete Task
             if st.button("🗑️ Löschen", key=f"del_{col_name}_{idx}"):
                 st.session_state.tasks[col_name].pop(idx)
                 save_tasks(st.session_state.tasks, st.session_state.sha)
                 reload_tasks()
+                st.experimental_rerun()
