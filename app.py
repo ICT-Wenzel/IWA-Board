@@ -14,6 +14,7 @@ headers = {
 }
 
 # --- Funktionen: Laden & Speichern ---
+import base64
 
 def load_tasks():
     GITHUB_REPO = st.secrets["github_repo"]
@@ -28,33 +29,30 @@ def load_tasks():
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
     res = requests.get(url, headers=headers)
 
-    # Debug-Ausgabe
     st.write("GitHub Status Code:", res.status_code)
-    st.write("GitHub Response:", res.text)
+    st.write("GitHub Response Keys:", res.json().keys())
 
     if res.status_code == 200:
         content = res.json()
-        download_url = content.get("download_url")
-        if not download_url:
-            st.warning("Download-URL nicht gefunden. Prüfe, ob die Datei existiert.")
-            return {"Backlog": [], "In Progress": [], "Done": []}, None
-
         try:
-            file_text = requests.get(download_url).text
+            # Base64 decodieren
+            file_text = base64.b64decode(content["content"]).decode("utf-8")
             if not file_text.strip():
                 raise ValueError("Leere JSON-Datei")
             data = json.loads(file_text)
-            # Spalten sicherstellen
+
+            # Sicherstellen, dass alle Spalten existieren
             for col in ["Backlog", "In Progress", "Done"]:
                 if col not in data or not isinstance(data[col], list):
                     data[col] = []
+
             sha = content.get("sha")
             return data, sha
-        except (json.JSONDecodeError, ValueError) as e:
-            st.warning(f"JSON konnte nicht geladen werden: {e}")
+        except Exception as e:
+            st.warning(f"Fehler beim Laden der JSON-Datei: {e}")
             return {"Backlog": [], "In Progress": [], "Done": []}, None
     else:
-        st.warning("Fehler beim Laden der Datei von GitHub. Status Code: " + str(res.status_code))
+        st.warning("Fehler beim Laden der Datei von GitHub")
         return {"Backlog": [], "In Progress": [], "Done": []}, None
 
 def save_tasks(tasks, sha):
