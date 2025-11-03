@@ -1,9 +1,10 @@
 import streamlit as st
 import json
 import requests
+import base64
 
 # --- GitHub Setup ---
-GITHUB_REPO = st.secrets["github_repo"]
+GITHUB_REPO = st.secrets["github_repo"]  # z.B. "deinname/IWABoard"
 FILE_PATH = "data/tasks.json"
 GITHUB_TOKEN = st.secrets["github_token"]
 
@@ -12,7 +13,7 @@ headers = {
     "Accept": "application/vnd.github.v3+json"
 }
 
-# --- Laden und Initialisieren der Tasks ---
+# --- Funktionen: Laden & Speichern ---
 def load_tasks():
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
     res = requests.get(url, headers=headers)
@@ -20,7 +21,7 @@ def load_tasks():
         content = res.json()
         try:
             file_text = requests.get(content["download_url"]).text
-            if not file_text.strip():
+            if not file_text.strip():  # leeres JSON abfangen
                 raise ValueError("Empty JSON")
             data = json.loads(file_text)
         except (json.JSONDecodeError, ValueError):
@@ -32,7 +33,6 @@ def load_tasks():
 def save_tasks(tasks, sha):
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
     content_str = json.dumps(tasks, indent=2)
-    import base64
     payload = {
         "message": "Update tasks via IWA Board",
         "content": base64.b64encode(content_str.encode()).decode(),
@@ -42,34 +42,35 @@ def save_tasks(tasks, sha):
     res = requests.put(url, headers=headers, json=payload)
     return res.status_code in [200, 201]
 
-# --- Streamlit UI ---
+# --- Session State Setup ---
+if "tasks" not in st.session_state or "sha" not in st.session_state:
+    st.session_state.tasks, st.session_state.sha = load_tasks()
+
+# --- Streamlit Setup ---
 st.set_page_config(page_title="IWA Board", layout="wide")
 st.title("🧩 IWA Board")
-
-tasks, sha = load_tasks()
 
 columns = ["Backlog", "In Progress", "Done"]
 colors = ["#74b9ff", "#ffeaa7", "#55efc4"]
 cols = st.columns(3)
 
-# --- Task erstellen ---
+# --- Neue Aufgabe erstellen ---
 with st.sidebar:
     st.subheader("➕ Neue Aufgabe")
     new_title = st.text_input("Titel")
     new_desc = st.text_area("Beschreibung")
     if st.button("Hinzufügen"):
         if new_title.strip():
-            tasks["Backlog"].append({"title": new_title, "description": new_desc})
-            save_tasks(tasks, sha)
+            st.session_state.tasks["Backlog"].append({"title": new_title, "description": new_desc})
+            save_tasks(st.session_state.tasks, st.session_state.sha)
             st.success("Task hinzugefügt!")
-            st.experimental_rerun()
 
 # --- Board anzeigen ---
 for i, col_name in enumerate(columns):
     with cols[i]:
         st.markdown(f"### <span style='color:{colors[i]}'>{col_name}</span>", unsafe_allow_html=True)
-        remove_indices = []
-        for idx, task in enumerate(tasks[col_name]):
+        for idx, task in enumerate(st.session_state.tasks[col_name]):
+            # Card Design
             card = f"""
             <div style='
                 background-color: {colors[i]};
@@ -83,14 +84,14 @@ for i, col_name in enumerate(columns):
             """
             st.markdown(card, unsafe_allow_html=True)
 
+            # Move Task
             move_to = st.selectbox("Verschieben nach", columns, index=i, key=f"move_{col_name}_{idx}")
             if move_to != col_name:
-                moved = tasks[col_name].pop(idx)
-                tasks[move_to].append(moved)
-                save_tasks(tasks, sha)
-                st.experimental_rerun()
+                moved = st.session_state.tasks[col_name].pop(idx)
+                st.session_state.tasks[move_to].append(moved)
+                save_tasks(st.session_state.tasks, st.session_state.sha)
 
+            # Delete Task
             if st.button("🗑️ Löschen", key=f"del_{col_name}_{idx}"):
-                tasks[col_name].pop(idx)
-                save_tasks(tasks, sha)
-                st.experimental_rerun()
+                st.session_state.tasks[col_name].pop(idx)
+                save_tasks(st.session_state.tasks, st.session_state.sha)
