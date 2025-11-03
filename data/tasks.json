@@ -1,10 +1,6 @@
 {
   "Backlog": [
     {
-      "title": "Eisefarm",
-      "description": ""
-    },
-    {
       "title": "Holzfarm",
       "description": ""
     },
@@ -85,6 +81,11 @@
       "description": ""
     }
   ],
-  "In Progress": [],
+  "In Progress": [
+    {
+      "title": "Eisefarm",
+      "description": ""
+    }
+  ],
   "Done": []
 }
