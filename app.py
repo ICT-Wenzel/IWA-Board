@@ -15,11 +15,20 @@ headers = {
 def load_tasks():
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
     res = requests.get(url, headers=headers)
+    
     if res.status_code == 200:
         content = res.json()
-        data = json.loads(requests.get(content["download_url"]).text)
+        try:
+            file_text = requests.get(content["download_url"]).text
+            if not file_text.strip():  # falls Datei leer
+                raise ValueError("Empty JSON")
+            data = json.loads(file_text)
+        except (json.JSONDecodeError, ValueError):
+            # Leeres Board anlegen, falls JSON ungültig oder leer
+            data = {"Backlog": [], "In Progress": [], "Done": []}
         return data, content["sha"]
     else:
+        # Datei existiert noch nicht → leeres Board anlegen
         return {"Backlog": [], "In Progress": [], "Done": []}, None
 
 def save_tasks(tasks, sha):
