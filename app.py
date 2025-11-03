@@ -43,8 +43,10 @@ def save_tasks(tasks, sha):
     return res.status_code in [200, 201]
 
 # --- Session State Setup ---
-if "tasks" not in st.session_state or "sha" not in st.session_state:
+def reload_tasks():
     st.session_state.tasks, st.session_state.sha = load_tasks()
+
+reload_tasks()
 
 # --- Streamlit Setup ---
 st.set_page_config(page_title="IWA Board", layout="wide")
@@ -63,6 +65,7 @@ with st.sidebar:
         if new_title.strip():
             st.session_state.tasks["Backlog"].append({"title": new_title, "description": new_desc})
             save_tasks(st.session_state.tasks, st.session_state.sha)
+            reload_tasks()
             st.success("Task hinzugefügt!")
 
 # --- Board anzeigen ---
@@ -90,8 +93,10 @@ for i, col_name in enumerate(columns):
                 moved = st.session_state.tasks[col_name].pop(idx)
                 st.session_state.tasks[move_to].append(moved)
                 save_tasks(st.session_state.tasks, st.session_state.sha)
+                reload_tasks()
 
             # Delete Task
             if st.button("🗑️ Löschen", key=f"del_{col_name}_{idx}"):
                 st.session_state.tasks[col_name].pop(idx)
                 save_tasks(st.session_state.tasks, st.session_state.sha)
+                reload_tasks()
