@@ -59,10 +59,6 @@
     {
       "title": "Raid Farm",
       "description": ""
-    },
-    {
-      "title": "Andersite Farm",
-      "description": "Alex, automatisierung von Andersite"
     }
   ],
   "In Progress": [
@@ -73,6 +69,10 @@
     {
       "title": "Item crusher",
       "description": ""
+    },
+    {
+      "title": "Andersite Farm",
+      "description": "Alex, automatisierung von Andersite"
     }
   ],
   "Done": [
