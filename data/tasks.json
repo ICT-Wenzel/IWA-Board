@@ -63,10 +63,6 @@
   ],
   "In Progress": [
     {
-      "title": "Eisefarm",
-      "description": ""
-    },
-    {
       "title": "Item crusher",
       "description": ""
     },
@@ -78,6 +74,10 @@
   "Done": [
     {
       "title": "Trading Hall",
+      "description": ""
+    },
+    {
+      "title": "Eisefarm",
       "description": ""
     }
   ]
